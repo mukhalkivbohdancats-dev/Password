@@ -1,0 +1,32 @@
+name: Password Strength App CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Клонування репозиторію
+      uses: actions/checkout@v4
+
+    - name: Перевірка файлів проєкту
+      run: |
+        echo "Перевірка наявності основних файлів..."
+        ls -la
+        if [ -f "Index.html" ] || [ -f "index.html" ]; then
+          echo "HTML файл знайдено успішно!"
+        else
+          echo "Попередження: HTML файл не знайдено в корені."
+        fi
+
+    - name: Розгортання на GitHub Pages (опціонально)
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: .
