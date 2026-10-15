@@ -6,8 +6,13 @@ on:
   pull_request:
     branches: [ main, master ]
 
+# Надаємо права на запис для вирішення помилки git push (exit code 128)
+permissions:
+  contents: write
+
 jobs:
   build-and-deploy:
+  # Використовуємо новішу версію ubuntu для уникнення застарілих попереджень
     runs-on: ubuntu-latest
 
     steps:
@@ -24,7 +29,7 @@ jobs:
           echo "Попередження: HTML файл не знайдено в корені."
         fi
 
-    - name: Розгортання на GitHub Pages (опціонально)
+    - name: Розгортання на GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
