@@ -22,20 +22,28 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: 3. Налаштування Android SDK
-      uses: android-actions/setup-android@v3
+    - name: 3. Швидке налаштування Android SDK та ліцензій
+      run: |
+        echo "Налаштування шляхів до Android SDK..."
+        echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        
+        # Автоматичне створення файлів ліцензій, щоб уникнути зависань sdkmanager
+        mkdir -p /usr/local/lib/android/sdk/licenses
+        echo "24333f1a63b361595089fb6e04369ef327b7239d" > /usr/local/lib/android/sdk/licenses/android-sdk-license
+        echo "d56f5187479451eabf01fb78af6dfcb139a648b0" >> /usr/local/lib/android/sdk/licenses/android-sdk-license
+        echo "84831b9409646a918e30573bab4c9c91346d8abd" >> /usr/local/lib/android/sdk/licenses/android-sdk-license
+        echo "d975f751698a77b662f1254ddbeed3901e976f5a" >> /usr/local/lib/android/sdk/licenses/android-sdk-license
 
-    - name: 4. Підготовка проєкту та копіювання ваших файлів
+    - name: 4. Підготовка проєкту та копіювання файлів
       run: |
         mkdir -p app/src/main/java/com/password/app
         mkdir -p app/src/main/assets
 
-        # Копіювання файлів з урахуванням регістру та виправленням розширення ccs -> css
         if [ -f "Index.html" ]; then cp Index.html app/src/main/assets/Index.html; fi
         if [ -f "Index.js" ]; then cp Index.js app/src/main/assets/Index.js; fi
         if [ -f "index.ccs" ]; then cp index.ccs app/src/main/assets/index.css; fi
 
-        # Налаштування конфігурації Gradle
         cat << 'EOF' > settings.gradle
         pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
         dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
@@ -96,7 +104,7 @@ jobs:
 
         echo "android.useAndroidX=true" > gradle.properties
 
-    - name: 5. Встановлення Gradle 8.6
+    - name: 5. Встановлення Gradle 8.6 та збірка
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.6'
@@ -104,13 +112,13 @@ jobs:
     - name: 6. Збірка дебаг-версії APK
       run: gradle assembleDebug
 
-    - name: 7. Створення папки apk та копіювання файлу
+    - name: 7. Створення папки apk та збереження файлу
       run: |
         mkdir -p apk
         cp app/build/outputs/apk/debug/app-debug.apk apk/password.apk
         ls -la apk
 
-    - name: 8. Збереження артефакту
+    - name: 8. Завантаження артефакту
       uses: actions/upload-artifact@v4
       with:
         name: password_apk
