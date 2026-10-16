@@ -24,11 +24,8 @@ jobs:
 
     - name: 3. Швидке налаштування Android SDK та ліцензій
       run: |
-        echo "Налаштування шляхів до Android SDK..."
         echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
         echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-        
-        # Автоматичне створення файлів ліцензій, щоб уникнути зависань sdkmanager
         mkdir -p /usr/local/lib/android/sdk/licenses
         echo "24333f1a63b361595089fb6e04369ef327b7239d" > /usr/local/lib/android/sdk/licenses/android-sdk-license
         echo "d56f5187479451eabf01fb78af6dfcb139a648b0" >> /usr/local/lib/android/sdk/licenses/android-sdk-license
@@ -44,26 +41,66 @@ jobs:
         if [ -f "Index.js" ]; then cp Index.js app/src/main/assets/Index.js; fi
         if [ -f "index.ccs" ]; then cp index.ccs app/src/main/assets/index.css; fi
 
+        # Сучасний синтаксис settings.gradle
         cat << 'EOF' > settings.gradle
-        pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-        dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+        pluginManagement {
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
+        dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
         rootProject.name = "PasswordStrength"
         include ':app'
         EOF
 
+        # Сучасний кореневий build.gradle
         cat << 'EOF' > build.gradle
-        buildscript { repositories { google(); mavenCentral() } dependencies { classpath 'com.android.tools.build:gradle:8.2.2' } }
+        plugins {
+            id 'com.android.application' version '8.2.2' apply false
+        }
         EOF
 
+        # Конфігурація додатка app/build.gradle
         cat << 'EOF' > app/build.gradle
-        plugins { id 'com.android.application' }
+        plugins {
+            id 'com.android.application'
+        }
+
         android {
             namespace 'com.password.app'
             compileSdk 34
-            defaultConfig { applicationId "com.password.app"; minSdk 24; targetSdk 34; versionCode 1; versionName "1.0" }
-            compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+
+            defaultConfig {
+                applicationId "com.password.app"
+                minSdk 24
+                targetSdk 34
+                versionCode 1
+                versionName "1.0"
+            }
+
+            buildTypes {
+                release {
+                    minifyEnabled false
+                }
+            }
+            
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
         }
-        dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
+
+        dependencies {
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+        }
         EOF
 
         cat << 'EOF' > app/src/main/AndroidManifest.xml
@@ -104,13 +141,15 @@ jobs:
 
         echo "android.useAndroidX=true" > gradle.properties
 
-    - name: 5. Встановлення Gradle 8.6 та збірка
+    - name: 5. Встановлення Gradle 8.6
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.6'
 
-    - name: 6. Збірка дебаг-версії APK
-      run: gradle assembleDebug
+    - name: 6. Генерація Gradle Wrapper та збірка APK
+      run: |
+        gradle wrapper --gradle-version 8.6
+        ./gradlew assembleDebug
 
     - name: 7. Створення папки apk та збереження файлу
       run: |
