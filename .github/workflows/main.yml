@@ -154,19 +154,19 @@ jobs:
     - name: 7. Створення папки apk та збереження файлу
       run: |
         mkdir -p apk
-        cp app/build/outputs/apk/debug/app-debug.apk apk/password.apk
+        cp app/build/outputs/apk/debug/app-debug.apk apk/password_V1.1.apk
         ls -la apk
 
     - name: 8. Завантаження артефакту
       uses: actions/upload-artifact@v4
       with:
         name: password_apk
-        path: apk/password.apk
+        path: apk/password_V1.1.apk
 
     - name: 9. Автоматичний коміт папки apk та password.apk у репозиторій
       run: |
         git config --global user.name "GitHub Actions Bot"
         git config --global user.email "actions@github.com"
         git add apk/password.apk
-        git commit -m "Add compiled password.apk [skip ci]" || echo "No changes"
+        git commit -m "Add compiled password_V1.1.apk [skip ci]" || echo "No changes"
         git push
