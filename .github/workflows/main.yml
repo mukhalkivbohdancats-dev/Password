@@ -13,109 +13,57 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Клонування репозиторію
+    - name: 1. Клонування репозиторію
       uses: actions/checkout@v4
 
-    - name: Налаштування JDK 17
+    - name: 2. Налаштування Java JDK 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Налаштування Android SDK
+    - name: 3. Налаштування Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Створення структури Android-проєкту
+    - name: 4. Підготовка проєкту та копіювання ваших файлів
       run: |
         mkdir -p app/src/main/java/com/password/app
         mkdir -p app/src/main/assets
-        mkdir -p gradle/wrapper
 
-        # Копіювання вебфайлів у розсудливі назви
-        cp Index.html app/src/main/assets/Index.html || cp index.html app/src/main/assets/Index.html
-        cp Index.js app/src/main/assets/Index.js || cp index.js app/src/main/assets/Index.js
-        cp index.ccs app/src/main/assets/index.css || cp index.css app/src/main/assets/index.css || true
+        # Копіювання файлів з урахуванням регістру та виправленням розширення ccs -> css
+        if [ -f "Index.html" ]; then cp Index.html app/src/main/assets/Index.html; fi
+        if [ -f "Index.js" ]; then cp Index.js app/src/main/assets/Index.js; fi
+        if [ -f "index.ccs" ]; then cp index.ccs app/src/main/assets/index.css; fi
 
-        # Налаштування settings.gradle
+        # Налаштування конфігурації Gradle
         cat << 'EOF' > settings.gradle
-        pluginManagement {
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-        }
-        dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
+        pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+        dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
         rootProject.name = "PasswordStrength"
         include ':app'
         EOF
 
-        # Налаштування root build.gradle
         cat << 'EOF' > build.gradle
-        buildscript {
-            repositories {
-                google()
-                mavenCentral()
-            }
-            dependencies {
-                classpath 'com.android.tools.build:gradle:8.2.2'
-            }
-        }
+        buildscript { repositories { google(); mavenCentral() } dependencies { classpath 'com.android.tools.build:gradle:8.2.2' } }
         EOF
 
-        # Налаштування app/build.gradle
         cat << 'EOF' > app/build.gradle
-        plugins {
-            id 'com.android.application'
-        }
-
+        plugins { id 'com.android.application' }
         android {
             namespace 'com.password.app'
             compileSdk 34
-
-            defaultConfig {
-                applicationId "com.password.app"
-                minSdk 24
-                targetSdk 34
-                versionCode 1
-                versionName "1.0"
-            }
-
-            buildTypes {
-                release {
-                    minifyEnabled false
-                }
-            }
-            compileOptions {
-                sourceCompatibility JavaVersion.VERSION_17
-                targetCompatibility JavaVersion.VERSION_17
-            }
+            defaultConfig { applicationId "com.password.app"; minSdk 24; targetSdk 34; versionCode 1; versionName "1.0" }
+            compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
         }
-
-        dependencies {
-            implementation 'androidx.appcompat:appcompat:1.6.1'
-        }
+        dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
         EOF
 
-        # Маніфест
         cat << 'EOF' > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
-            <application
-                android:allowBackup="true"
-                android:label="Password Strength"
-                android:supportsRtl="true"
-                android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-                <activity
-                    android:name=".MainActivity"
-                    android:exported="true">
+            <application android:label="Password Strength" android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+                <activity android:name=".MainActivity" android:exported="true">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN" />
                         <category android:name="android.intent.category.LAUNCHER" />
@@ -125,16 +73,13 @@ jobs:
         </manifest>
         EOF
 
-        # Java MainActivity (завантажує Index.html)
         cat << 'EOF' > app/src/main/java/com/password/app/MainActivity.java
         package com.password.app;
-
         import android.os.Bundle;
         import android.webkit.WebSettings;
         import android.webkit.WebView;
         import android.webkit.WebViewClient;
         import androidx.appcompat.app.AppCompatActivity;
-
         public class MainActivity extends AppCompatActivity {
             @Override
             protected void onCreate(Bundle savedInstanceState) {
@@ -142,7 +87,6 @@ jobs:
                 WebView webView = new WebView(this);
                 WebSettings webSettings = webView.getSettings();
                 webSettings.setJavaScriptEnabled(true);
-                webSettings.setDomStorageEnabled(true);
                 webView.setWebViewClient(new WebViewClient());
                 webView.loadUrl("file:///android_asset/Index.html");
                 setContentView(webView);
@@ -152,29 +96,30 @@ jobs:
 
         echo "android.useAndroidX=true" > gradle.properties
 
-    - name: Встановлення та налаштування Gradle 8.6
+    - name: 5. Встановлення Gradle 8.6
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.6'
 
-    - name: Збірка APK
+    - name: 6. Збірка дебаг-версії APK
       run: gradle assembleDebug
 
-    - name: Підготовка папки apk
+    - name: 7. Створення папки apk та копіювання файлу
       run: |
         mkdir -p apk
         cp app/build/outputs/apk/debug/app-debug.apk apk/password.apk
+        ls -la apk
 
-    - name: Завантаження готового password.apk в Артефакти (для завантаження)
+    - name: 8. Збереження артефакту
       uses: actions/upload-artifact@v4
       with:
         name: password_apk
         path: apk/password.apk
 
-    - name: Збереження password.apk у репозиторій
+    - name: 9. Автоматичний коміт папки apk та password.apk у репозиторій
       run: |
         git config --global user.name "GitHub Actions Bot"
         git config --global user.email "actions@github.com"
         git add apk/password.apk
-        git commit -m "Add compiled password.apk [skip ci]" || echo "No changes to commit"
+        git commit -m "Add compiled password.apk [skip ci]" || echo "No changes"
         git push
